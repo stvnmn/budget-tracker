@@ -1,0 +1,16 @@
+services:
+  budget:
+    build: .
+    container_name: budget_app
+    restart: unless-stopped
+    ports:
+      - "3080:8000"
+    volumes:
+      - /DATA/AppData/budget_app/data:/data
+    environment:
+      DB_PATH: /data/budget.db
+      WEEKLY_LIMIT: 500
+      CATEGORIES: Food,Groceries
+      TZ: Etc/UTC
+      APP_TITLE: ${APP_TITLE:-Budget Tracker}
+      CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-$$}

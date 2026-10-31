@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block head_extra %}
+<meta http-equiv="refresh" content="300">
+{% endblock %}
+
+{% block content %}
+<!-- Controls row -->
+<div class="dash-controls">
+  <div>
+    <div class="week-range-label">{{ week_range_label }}</div>
+    <div class="text-muted" style="font-size:13px; margin-top:4px;">
+      {{ days_left }} day{{ 's' if days_left != 1 else '' }} remaining this week
+    </div>
+  </div>
+
+  <div class="week-selector-wrap">
+    <span class="refresh-badge">↻ {{ last_refreshed }}</span>
+    <form method="get">
+      <label class="week-selector-wrap" style="gap:8px;">
+        <span style="font-size:13px; color:var(--text-secondary); font-weight:500;">Week</span>
+        <select name="YearWeek" class="week-select" onchange="this.form.submit()">
+          {% for w in weeks %}
+            <option value="{{ w }}" {% if w == selected_week %}selected{% endif %}>{{ w }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </form>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+
+  <div class="kpi-card">
+    <div class="kpi-label">Budget Remaining</div>
+    <div class="kpi-value
+      {% if remaining <= 0 %}negative
+      {% elif remaining <= 50 %}warning
+      {% else %}positive{% endif %}">
+      {{ currency_symbol }}{{ "%.2f"|format(remaining) }}
+    </div>
+    <div class="kpi-sub">of {{ currency_symbol }}{{ budget }} weekly limit</div>
+    <div class="budget-ring-wrap mt-16">
+      <div class="budget-bar-wrap">
+        <div class="budget-bar-fill {% if remaining <= 0 %}danger{% endif %}"
+             style="width: {{ [[(total_spend / budget * 100), 0]|max, 100]|min }}%">
+        </div>
+      </div>
+      <span style="font-family:'DM Mono',monospace; font-size:12px; color:var(--text-muted); white-space:nowrap;">
+        {{ "%.0f"|format([[(total_spend / budget * 100), 0]|max, 100]|min) }}% used
+      </span>
+    </div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Total Spent</div>
+    <div class="kpi-value">{{ currency_symbol }}{{ "%.2f"|format(total_spend) }}</div>
+    <div class="kpi-sub">{{ selected_week }}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Largest Transaction</div>
+    <div class="kpi-value">{{ currency_symbol }}{{ "%.2f"|format(highest_item.amount) }}</div>
+    <div class="kpi-sub">{{ highest_item.description }}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-label">Days Left</div>
+    <div class="kpi-value">{{ days_left }}</div>
+    <div class="kpi-sub">until end of week (Sunday)</div>
+  </div>
+
+</div>
+
+<!-- Charts row -->
+<div class="dash-grid three-col">
+
+  <!-- Daily bar chart -->
+  <div class="card">
+    <div class="chart-title">Daily Spend by Category</div>
+    <div class="chart-wrap">
+
+      <div class="y-axis">
+        {% for t in y_ticks[::-1] %}
+          <div class="y-tick">{{ currency_symbol }}{{ t }}</div>
+        {% endfor %}
+      </div>
+
+      <div class="bar-chart">
+        {% for i in range(7) %}
+          <div class="stacked-bar">
+            {% if daily_totals[i] > 0 %}
+            <div class="bar-total">
+              {{ currency_symbol }}{{ "%.0f"|format(daily_totals[i]) }}
+            </div>
+            {% endif %}
+            {% for category in category_data %}
+            <div class="bar-seg" style="height:{{ category.heights[i] }}px; background:{{ category.category_color }};"></div>
+            {% endfor %}
+            <div class="bar-day">{{ day_order[i][:3] }}</div>
+          </div>
+        {% endfor %}
+      </div>
+
+    </div>
+
+    <!-- Legend -->
+    <div style="display:flex; flex-wrap:wrap; gap:20px; margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+      {% for category in category_data %}
+      <div style="display:flex; align-items:center; gap:7px; font-size:13px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:{{ category.category_color }};"></div>
+        <span style="color:var(--text-secondary);">{{ category.name }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Category breakdown -->
+  <div class="card">
+    <div class="chart-title">By Category</div>
+    <div class="cat-legend">
+
+      {% for category in category_data %}
+      <div class="cat-item">
+        <div class="cat-row-top">
+          <div class="cat-dot" style="background:{{ category.category_color }};"></div>
+          <span class="cat-name">{{ category.name }}</span>
+          <span class="cat-amount">{{ currency_symbol }}{{ "%.2f"|format(category.total) }}</span>
+          <span class="cat-pct">{{ category.pct }}%</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-fill" style="width:{{ category.pct }}%; background:{{ category.category_color }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Transactions table -->
+<div class="card mt-20">
+  <div class="chart-title" style="margin-bottom:16px;">Transactions — {{ selected_week }}</div>
+  {% if transactions %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="text-mono" style="font-size:12.5px; color:var(--text-secondary);">
+            {{ t.date[:16] }}
+          </td>
+          <td>{{ t.description }}</td>
+          <td>
+            <span class="cat-badge" style="--category-badge-bg:{{ t.category_badge_background }}; --category-badge-text:{{ t.category_badge_color }}; --category-badge-dark-bg:{{ t.category_dark_badge_background }}; --category-badge-dark-text:{{ t.category_dark_badge_color }};">
+              {{ t.category }}
+            </span>
+          </td>
+          <td class="amount-cell">{{ currency_symbol }}{{ "%.2f"|format(t.amount) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">No transactions for this week.</div>
+  {% endif %}
+</div>
+
+{% endblock %}

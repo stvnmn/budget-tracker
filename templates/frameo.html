@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ app_title }} — Frameo</title>
+    <meta http-equiv="refresh" content="300">
+    <style>
+        /* ═══════════════════════════════════════════════════
+           BASE — no web fonts, no JS, no GPU-heavy CSS
+           System font stack only. Works on minimal browsers.
+        ═══════════════════════════════════════════════════ */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f0f2f5;
+            color: #1a1a1a;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        /* ── Header ──────────────────────────────────────── */
+        .header {
+            background: #1e2a3a;
+            color: #fff;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: bold;
+        }
+
+        .header-week {
+            font-size: 13px;
+            color: #b0bec8;
+            margin-top: 2px;
+        }
+
+        .header-meta {
+            font-size: 11px;
+            color: #7a8fa8;
+            text-align: right;
+        }
+
+        /* ── Shared panel ────────────────────────────────── */
+        .panel {
+            background: #fff;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            padding: 14px;
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #555;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        /* ── KPI card ────────────────────────────────────── */
+        .kpi {
+            background: #fff;
+            border: 1px solid #d0d5dd;
+            border-top: 3px solid #d4a017;
+            border-radius: 6px;
+            padding: 12px 14px;
+        }
+
+        .kpi-label {
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #777;
+            margin-bottom: 5px;
+        }
+
+        .kpi-value {
+            font-size: 26px;
+            font-weight: bold;
+            color: #1a1a1a;
+            line-height: 1;
+        }
+
+        .kpi-value.green  { color: #1a7a3a; }
+        .kpi-value.yellow { color: #9a6500; }
+        .kpi-value.red    { color: #b00020; }
+
+        .kpi-sub {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .budget-bar-outer {
+            height: 6px;
+            background: #e0e4ea;
+            border-radius: 3px;
+            margin-top: 7px;
+            overflow: hidden;
+        }
+
+        .budget-bar-inner {
+            height: 100%;
+            border-radius: 3px;
+            background: #d4a017;
+        }
+
+        .budget-bar-inner.danger { background: #b00020; }
+
+        /* ── Bar chart ───────────────────────────────────── */
+        /* padding-top creates room for the .bar-val label   */
+        /* Height must match scale=180 used in app.py        */
+        .bar-chart-wrap {
+            padding-top: 22px;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            height: 180px;
+            border-bottom: 1px solid #ccc;
+            overflow: visible;
+        }
+
+        .bar-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            height: 100%;
+            justify-content: flex-end;
+        }
+
+        .bar-stack {
+            width: 100%;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .bar-seg { width: 100%; }
+
+        .bar-label {
+            margin-top: 5px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .bar-val {
+            position: absolute;
+            top: -18px;
+            font-size: 9px;
+            color: #333;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* ── Legend ──────────────────────────────────────── */
+        .legend {
+            display: flex;
+            gap: 14px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #555;
+        }
+
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+
+        .leg-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        /* ── Category rows ───────────────────────────────── */
+        .cat-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .cat-swatch {
+            width: 11px; height: 11px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .cat-name { flex: 1; font-weight: bold; font-size: 13px; }
+        .cat-amt  { font-weight: bold; font-size: 14px; }
+        .cat-pct  { font-size: 11px; color: #888; width: 40px; text-align: right; }
+
+        .cat-prog-outer {
+            height: 5px;
+            background: #e8eaed;
+            border-radius: 3px;
+            margin-top: 3px;
+            overflow: hidden;
+        }
+
+        .cat-prog { height: 5px; border-radius: 3px; }
+
+        /* ── Table ───────────────────────────────────────── */
+        .tbl-wrap { overflow-x: auto; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        thead th {
+            background: #1e2a3a;
+            color: #b0bec8;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 8px 10px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        tbody tr { border-bottom: 1px solid #e8eaed; }
+        tbody tr:last-child { border-bottom: none; }
+        tbody td { padding: 8px 10px; vertical-align: middle; }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .badge { background: #e8eaed; color: #333; }
+
+        .amt { font-weight: bold; }
+
+        .empty {
+            text-align: center;
+            padding: 28px;
+            color: #999;
+            font-size: 13px;
+        }
+
+        /* ── Footer ──────────────────────────────────────── */
+        .footer {
+            text-align: center;
+            font-size: 11px;
+            color: #aaa;
+            padding: 10px 16px 18px;
+        }
+
+
+        /* ═══════════════════════════════════════════════════
+           LANDSCAPE  (default — desktop browser / horizontal Frameo)
+        ═══════════════════════════════════════════════════ */
+        @media (orientation: landscape) {
+
+            .kpi-row {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 10px;
+                padding: 12px 16px 0;
+            }
+
+            .kpi { flex: 1 1 0; min-width: 0; }
+
+            .body-row {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 10px;
+                padding: 10px 16px;
+            }
+
+            .chart-panel { flex: 2 1 0; min-width: 0; }
+            .cat-panel   { flex: 1 1 0; min-width: 0; }
+
+            .tbl-row { padding: 0 16px 10px; }
+        }
+
+
+        /* ═══════════════════════════════════════════════════
+           PORTRAIT  (vertical Frameo kiosk)
+        ═══════════════════════════════════════════════════ */
+        @media (orientation: portrait) {
+
+            body { font-size: 16px; }
+
+            /* Stack header vertically, larger text */
+            .header {
+                padding: 16px 18px;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 3px;
+            }
+
+            .header-title { font-size: 22px; }
+            .header-week  { font-size: 15px; }
+            .header-meta  { text-align: left; margin-top: 2px; }
+
+            /* KPIs: 2 × 2 grid */
+            .kpi-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                padding: 14px 14px 0;
+            }
+
+            .kpi-value { font-size: 32px; }
+            .kpi-label { font-size: 11px; }
+            .kpi-sub   { font-size: 12px; }
+
+            /* Chart and category stacked full-width */
+            .body-row {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px 14px;
+            }
+
+            .chart-panel { width: 100%; }
+            .cat-panel   { width: 100%; }
+
+            /* Taller chart — more vertical space available */
+            .bar-chart { height: 220px; }
+
+            /* Category: side-by-side columns in portrait */
+            .cat-inner {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px 20px;
+            }
+
+            /* Bigger table text for kiosk legibility */
+            table    { font-size: 15px; }
+            thead th { font-size: 11px; padding: 10px 12px; }
+            tbody td { padding: 11px 12px; }
+
+            .tbl-row { padding: 0 14px 14px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+    <div>
+        <div class="header-title">&#9672; {{ app_title }}</div>
+        <div class="header-week">{{ week_range_label }}</div>
+    </div>
+    <div class="header-meta">
+        Auto-refresh every 5 min &nbsp;&middot;&nbsp; {{ last_refreshed }}
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-row">
+
+    <div class="kpi">
+        <div class="kpi-label">Budget Remaining</div>
+        <div class="kpi-value {% if remaining <= 0 %}red{% elif remaining <= 50 %}yellow{% else %}green{% endif %}">
+            {{ currency_symbol }}{{ "%.2f"|format(remaining) }}
+        </div>
+        <div class="kpi-sub">of {{ currency_symbol }}{{ budget }} limit</div>
+        <div class="budget-bar-outer">
+            <div class="budget-bar-inner {% if remaining <= 0 %}danger{% endif %}"
+                 style="width: {{ [[total_spend / budget * 100, 0]|max, 100]|min }}%;"></div>
+        </div>
+    </div>
+
+    <div class="kpi">
+        <div class="kpi-label">Total Spent</div>
+        <div class="kpi-value">{{ currency_symbol }}{{ "%.2f"|format(total_spend) }}</div>
+        <div class="kpi-sub">{{ selected_week }}</div>
+    </div>
+
+    <div class="kpi">
+        <div class="kpi-label">Largest Transaction</div>
+        <div class="kpi-value">{{ currency_symbol }}{{ "%.2f"|format(highest_item.amount) }}</div>
+        <div class="kpi-sub">{{ highest_item.description }}</div>
+    </div>
+
+    <div class="kpi">
+        <div class="kpi-label">Days Remaining</div>
+        <div class="kpi-value">{{ days_left }}</div>
+        <div class="kpi-sub">until end of week</div>
+    </div>
+
+</div>
+
+<!-- Chart + Category -->
+<div class="body-row">
+
+    <!-- Daily bar chart -->
+    <div class="panel chart-panel">
+        <div class="panel-title">Daily Spend by Category</div>
+        <div class="bar-chart-wrap">
+            <div class="bar-chart">
+                {% for i in range(7) %}
+                <div class="bar-col">
+                    {% if daily_totals[i] > 0 %}
+                    <div class="bar-val">{{ currency_symbol }}{{ "%.0f"|format(daily_totals[i]) }}</div>
+                    {% endif %}
+                    <div class="bar-stack">
+                        {% for category in category_data %}
+                        <div class="bar-seg"
+                             style="height: {{ category.heights[i] }}px; background: {{ category.category_color }};"></div>
+                        {% endfor %}
+                    </div>
+                    <div class="bar-label">{{ day_order[i][:3] }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="legend">
+            {% for category in category_data %}
+            <div class="legend-item"><span class="leg-dot" style="background: {{ category.category_color }};"></span> {{ category.name }}</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Category breakdown -->
+    <div class="panel cat-panel">
+        <div class="panel-title">By Category</div>
+        <div class="cat-inner">
+            {% for category in category_data %}
+            <div>
+                <div class="cat-row">
+                    <span class="cat-swatch" style="background: {{ category.category_color }};"></span>
+                    <span class="cat-name">{{ category.name }}</span>
+                    <span class="cat-amt">{{ currency_symbol }}{{ "%.2f"|format(category.total) }}</span>
+                    <span class="cat-pct">{{ category.pct }}%</span>
+                </div>
+                <div class="cat-prog-outer">
+                    <div class="cat-prog" style="width: {{ category.pct }}%; background: {{ category.category_color }};"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<!-- Transactions table -->
+<div class="tbl-row">
+    <div class="panel">
+        <div class="panel-title">Transactions &mdash; {{ selected_week }}</div>
+        {% if transactions %}
+        <div class="tbl-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transactions %}
+                    <tr>
+                        <td style="color:#666; font-size:12px; white-space:nowrap;">{{ t.date[:16] }}</td>
+                        <td>{{ t.description }}</td>
+                        <td><span class="badge" style="background: {{ t.category_badge_background }}; color: {{ t.category_badge_color }};">{{ t.category }}</span></td>
+                        <td class="amt">{{ currency_symbol }}{{ "%.2f"|format(t.amount) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty">No transactions this week.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="footer">{{ app_title }} &nbsp;&middot;&nbsp; Frameo View</div>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+name: budget
+services:
+  budget:
+    image: ghcr.io/stevenea985/budget-tracker:latest
+    pull_policy: always
+    container_name: budget_app
+    restart: unless-stopped
+    ports:
+      - "3080:8000"
+    volumes:
+      - /DATA/AppData/budget_app/data:/data
+    environment:
+      DB_PATH: /data/budget.db
+      WEEKLY_LIMIT: 500
+      CATEGORIES: Food,Groceries
+      TZ: Etc/UTC
+      APP_TITLE: Budget Tracker
+      CURRENCY_SYMBOL: "$"
+    x-casaos:
+      ports:
+        - container: "8000"
+          description:
+            en_us: Web UI
+x-casaos:
+  author: Budget Tracker contributors
+  category: Finance
+  description:
+    en_us: Self-hosted weekly budget tracker and dashboard
+  icon: https://cdn-icons-png.flaticon.com/512/2489/2489756.png
+  index: /
+  port_map: "3080"
+  scheme: http
+  store_app_id: budget
+  title:
+    en_us: Budget Tracker

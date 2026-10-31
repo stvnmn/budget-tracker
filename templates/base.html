@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Budget{% endblock %} — {{ app_title }}</title>
+    {% block head_extra %}{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="header-inner">
+        <div class="brand">
+            <span class="brand-icon">◈</span>
+            <span class="brand-name">{{ app_title }}</span>
+        </div>
+        <nav class="top-nav">
+            <a href="{{ url_for('dashboard') }}"
+               class="nav-btn {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">▤</span> Dashboard
+            </a>
+            <a href="{{ url_for('tracker') }}"
+               class="nav-btn {% if request.endpoint in ['tracker','edit'] %}active{% endif %}">
+                <span class="nav-icon">⊕</span> Data Entry
+            </a>
+            <a href="{{ url_for('frameo') }}"
+               class="nav-btn {% if request.endpoint == 'frameo' %}active{% endif %}">
+                <span class="nav-icon">▦</span> Frameo
+            </a>
+        </nav>
+    </div>
+</header>
+
+<main class="page-content">
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

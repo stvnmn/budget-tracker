@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Data Entry{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <h1>Data Entry</h1>
+  <div class="page-subtitle">Add transactions and review this week's spending</div>
+</div>
+
+<!-- Summary strips -->
+<div class="summary-strips">
+  <div class="strip">
+    <div class="strip-label">Budget Remaining</div>
+    <div class="strip-value {{ 'negative' if budget_available <= 0 else ('warning' if budget_available <= 50 else 'positive') }}">
+      {{ currency_symbol }}{{ "{:.2f}".format(budget_available) }}
+    </div>
+    <div class="strip-sub">of {{ currency_symbol }}{{ weekly_limit }} · {{ days_to_end }} day{{ 's' if days_to_end != 1 else '' }} left</div>
+  </div>
+
+  <div class="strip">
+    <div class="strip-label">Last Week</div>
+    <div class="strip-value {{ 'negative' if last_week_diff < 0 else 'positive' }}">
+      {{ currency_symbol }}{{ "{:.2f}".format(last_week_total) }}
+    </div>
+    <div class="strip-sub">
+      {{ 'Over by ' + currency_symbol + "{:.2f}".format(-last_week_diff) if last_week_diff < 0
+         else 'Under by ' + currency_symbol + "{:.2f}".format(last_week_diff) }}
+    </div>
+  </div>
+</div>
+
+<!-- Main layout: form left, table right -->
+<div class="tracker-layout">
+
+  <!-- Add transaction form -->
+  <div class="form-panel">
+    <h2>
+      <span class="icon">＋</span>
+      Add Transaction
+    </h2>
+
+    <form method="POST" action="{{ url_for('tracker') }}">
+      <div class="form-field">
+        <label class="form-label">Description</label>
+        <input class="form-input" type="text" name="description"
+               placeholder="e.g. Costco run" required autofocus>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Category</label>
+        <select class="form-select" name="category" required>
+          {% for category in categories %}
+          <option value="{{ category }}">{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label class="form-label">Amount ({{ currency_symbol }})</label>
+        <input class="form-input" type="number" name="amount"
+               step="0.01" min="0.01" placeholder="0.00" required>
+      </div>
+
+      <button type="submit" class="btn-submit">Add Transaction</button>
+    </form>
+  </div>
+
+  <!-- Current week table -->
+  <div>
+    <div class="card">
+      <div class="chart-title" style="margin-bottom:16px;">
+        This Week's Transactions
+      </div>
+
+      {% if data %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Week Total</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data %}
+            <tr class="{% if row['weekly_total'] > weekly_limit %}over-limit{% endif %}">
+              <td class="text-muted" style="font-size:12px;">{{ loop.index }}</td>
+              <td class="text-mono" style="font-size:12px; color:var(--text-secondary);">
+                {{ row['date'][:16] }}
+              </td>
+              <td>{{ row['description'] }}</td>
+              <td>
+                <span class="cat-badge" style="--category-badge-bg:{{ row['category_badge_background'] }}; --category-badge-text:{{ row['category_badge_color'] }}; --category-badge-dark-bg:{{ row['category_dark_badge_background'] }}; --category-badge-dark-text:{{ row['category_dark_badge_color'] }};">
+                  {{ row['category'] }}
+                </span>
+              </td>
+              <td class="amount-cell">{{ currency_symbol }}{{ "{:.2f}".format(row['amount']) }}</td>
+              <td class="total-cell">
+                {{ currency_symbol }}{{ "{:.2f}".format(row['weekly_total']) }}
+                {% if row['weekly_total'] > weekly_limit %}
+                  <span style="color:var(--red); font-size:11px; margin-left:4px;">⚠ over</span>
+                {% endif %}
+              </td>
+              <td style="white-space:nowrap;">
+                <a class="btn-edit" href="{{ url_for('edit', row_id=row['id']) }}">✎ Edit</a>
+                <a class="btn-delete"
+                   href="{{ url_for('delete', row_id=row['id']) }}"
+                   onclick="return confirm('Delete &quot;{{ row['description'] }}&quot;?')">✕ Del</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="empty-state">
+        No transactions yet this week.<br>Add your first one using the form.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Edit Transaction{% endblock %}
+
+{% block content %}
+<div class="edit-wrap">
+  <div class="edit-card">
+    <h2>Edit Transaction</h2>
+
+    <form method="POST">
+      <div class="edit-field">
+        <label class="edit-label">Description</label>
+        <input class="edit-input" type="text" name="description"
+               value="{{ row['description'] }}" required>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Category</label>
+        <select class="edit-select" name="category" required>
+          {% if row['category'] not in categories %}
+          <option value="{{ row['category'] }}" selected>{{ row['category'] }}</option>
+          {% endif %}
+          {% for category in categories %}
+          <option value="{{ category }}" {% if row['category'] == category %}selected{% endif %}>{{ category }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="edit-field">
+        <label class="edit-label">Amount ({{ currency_symbol }})</label>
+        <input class="edit-input" type="number" step="0.01" name="amount"
+               value="{{ row['amount'] }}" required>
+      </div>
+
+      <div class="edit-actions">
+        <button type="submit" class="btn-save">Save Changes</button>
+        <a href="{{ url_for('tracker') }}" class="btn-back">← Back</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
