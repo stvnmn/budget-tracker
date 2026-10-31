@@ -20,7 +20,7 @@ A self-hosted weekly budget tracker with a transaction list and spending dashboa
 Clone the repository and start the app:
 
 ```sh
-git clone https://github.com/stevenea985/budget-tracker.git
+git clone https://github.com/stvnmn/budget-tracker.git
 cd budget-tracker
 docker compose up -d --build
 ```
@@ -53,7 +53,7 @@ For another currency symbol, set `CURRENCY_SYMBOL` to a value such as `€`, `£
 
 ### Publish the image to GitHub Container Registry
 
-The ZimaOS Compose file uses `ghcr.io/stevenea985/budget-tracker:latest`. This checkout does not include a GitHub Actions workflow to publish the image, so publish that package to GitHub Container Registry before installing. Make the package public in its **Package settings** so ZimaOS can pull it without registry credentials; this is separate from making the source repository public.
+The ZimaOS Compose file uses `ghcr.io/stvnmn/budget-tracker:latest`. This checkout does not include a GitHub Actions workflow to publish the image, so publish that package to GitHub Container Registry before installing. Make the package public in its **Package settings** so ZimaOS can pull it without registry credentials; this is separate from making the source repository public.
 
 In ZimaOS, open **App Store → Custom Install → Compose**, paste the ZimaOS Compose file, and install. The `pull_policy: always` setting tells Docker Compose to check GHCR for the current image when deploying.
 

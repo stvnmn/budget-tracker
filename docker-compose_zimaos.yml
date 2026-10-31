@@ -1,7 +1,7 @@
 name: budget
 services:
   budget:
-    image: ghcr.io/stevenea985/budget-tracker:latest
+    image: ghcr.io/stvnmn/budget-tracker:latest
     pull_policy: always
     container_name: budget_app
     restart: unless-stopped
