@@ -53,13 +53,15 @@ For another currency symbol, set `CURRENCY_SYMBOL` to a value such as `€`, `£
 
 ### Publish the image to GitHub Container Registry
 
-The ZimaOS Compose file uses `ghcr.io/stvnmn/budget-tracker:latest`. This checkout does not include a GitHub Actions workflow to publish the image, so publish that package to GitHub Container Registry before installing. Make the package public in its **Package settings** so ZimaOS can pull it without registry credentials; this is separate from making the source repository public.
+The workflow in `.github/workflows/publish-image.yml` automatically builds and publishes multi-architecture images (`linux/amd64` and `linux/arm64`) to `ghcr.io/stvnmn/budget-tracker` when code is pushed to `main` or a version tag such as `v1.0.0` is pushed. It also supports manual runs from the repository's **Actions** tab. The `main` branch image is tagged `latest`, which is what the ZimaOS Compose file uses. The workflow uses GitHub's built-in token; no registry credentials need to be added to repository secrets.
+
+After the first successful workflow run, open the container package from the repository's **Packages** section and set its visibility to **Public** in **Package settings** so ZimaOS can pull without registry credentials. This is separate from making the source repository public.
 
 In ZimaOS, open **App Store → Custom Install → Compose**, paste the ZimaOS Compose file, and install. The `pull_policy: always` setting tells Docker Compose to check GHCR for the current image when deploying.
 
 The ZimaOS Compose template supports app title, currency symbol, timezone, and budget changes through its environment section. Keep its database mount path, `/DATA/AppData/budget_app/data:/data`, unchanged when updating if you want to continue using the same database. Back up the database before replacing an existing deployment. Stop or uninstall a previous deployment first, but do not delete its app data; duplicate deployments can conflict because they use the same container name and port.
 
-For code updates, publish the updated image to the same GHCR package, then redeploy/update the ZimaOS app so it pulls the new `latest` image. To use this template for a fork, change the Compose `image` value to the fork's GHCR package path.
+For code updates, push to `main`, wait for the **Publish container image** workflow to succeed, then redeploy/update the ZimaOS app so it pulls the new `latest` image. To use this template for a fork, change the image in both the workflow and the Compose file to the fork's GHCR package path.
 
 ## Security and privacy
 
