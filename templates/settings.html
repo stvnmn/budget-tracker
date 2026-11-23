@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="edit-wrap">
+  <div class="edit-card">
+    <h2>Settings</h2>
+    {% if saved %}
+    <p class="settings-success" role="status">Settings saved.</p>
+    {% endif %}
+    {% if errors %}
+    <div class="settings-errors" role="alert">
+      {% for error in errors %}<p>{{ error }}</p>{% endfor %}
+    </div>
+    {% endif %}
+    <form method="POST">
+      <div class="edit-field">
+        <label class="edit-label" for="weekly-limit">Weekly limit</label>
+        <input class="edit-input" id="weekly-limit" type="number" name="weekly_limit"
+               value="{{ values.weekly_limit }}" min="0.01" step="0.01" required>
+      </div>
+      <div class="edit-field">
+        <label class="edit-label" for="categories">Categories</label>
+        <textarea class="edit-input settings-categories" id="categories" name="categories"
+                  rows="5" required>{{ values.categories }}</textarea>
+        <p class="settings-help">One category per line. Removing a category does not change existing transactions.</p>
+      </div>
+      <div class="edit-field">
+        <label class="edit-label" for="currency-symbol">Currency symbol</label>
+        <input class="edit-input" id="currency-symbol" type="text" name="currency_symbol"
+               value="{{ values.currency_symbol }}" maxlength="16" required>
+        <p class="settings-help">Display only; changing this does not convert amounts.</p>
+      </div>
+      <div class="edit-actions">
+        <button type="submit" class="btn-save">Save Settings</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

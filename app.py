@@ -2,7 +2,9 @@
 Budget App — combined Tracker + Dashboard
 Single Flask process, SQLite storage, no pandas dependency.
 """
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, g, render_template, request, redirect, url_for
+import json
+import math
 import sqlite3
 import os
 from datetime import datetime, timedelta
@@ -10,23 +12,14 @@ from datetime import datetime, timedelta
 app = Flask(__name__)
 
 DB_PATH         = os.environ.get("DB_PATH", "/data/budget.db")
-WEEKLY_LIMIT    = int(os.environ.get("WEEKLY_LIMIT", 500))
 APP_TITLE       = os.environ.get("APP_TITLE", "Budget Tracker")
-CURRENCY_SYMBOL = os.environ.get("CURRENCY_SYMBOL", "$")
-CATEGORIES   = list(dict.fromkeys(
-    category.strip()
-    for category in os.environ.get("CATEGORIES", "Food,Groceries").split(",")
-    if category.strip()
-))
-if not CATEGORIES:
-    raise ValueError("CATEGORIES must contain at least one comma-separated category")
 
 
 @app.context_processor
 def inject_app_settings():
     return {
         "app_title": APP_TITLE,
-        "currency_symbol": CURRENCY_SYMBOL,
+        "currency_symbol": get_settings()["currency_symbol"],
     }
 
 
@@ -65,7 +58,45 @@ def init_db():
             )
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_year_week ON transactions(year_week)")
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                id              INTEGER PRIMARY KEY CHECK (id = 1),
+                weekly_limit    REAL NOT NULL,
+                categories      TEXT NOT NULL,
+                currency_symbol TEXT NOT NULL
+            )
+        """)
+        if conn.execute("SELECT 1 FROM settings WHERE id=1").fetchone() is None:
+            weekly_limit = float(os.environ.get("WEEKLY_LIMIT", "500"))
+            categories = list(dict.fromkeys(
+                category.strip()
+                for category in os.environ.get("CATEGORIES", "Food,Groceries").split(",")
+                if category.strip()
+            ))
+            currency_symbol = os.environ.get("CURRENCY_SYMBOL", "$").strip()
+            if not math.isfinite(weekly_limit) or weekly_limit < 0.01:
+                raise ValueError("WEEKLY_LIMIT must be a finite number of at least 0.01")
+            if not categories:
+                raise ValueError("CATEGORIES must contain at least one comma-separated category")
+            if not currency_symbol:
+                raise ValueError("CURRENCY_SYMBOL must not be empty")
+            conn.execute(
+                "INSERT OR IGNORE INTO settings VALUES (1, ?, ?, ?)",
+                (weekly_limit, json.dumps(categories), currency_symbol),
+            )
         conn.commit()
+
+
+def get_settings():
+    if "budget_settings" not in g:
+        with get_db() as conn:
+            row = conn.execute("SELECT * FROM settings WHERE id=1").fetchone()
+        g.budget_settings = {
+            "weekly_limit": row["weekly_limit"],
+            "categories": json.loads(row["categories"]),
+            "currency_symbol": row["currency_symbol"],
+        }
+    return g.budget_settings
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -78,8 +109,9 @@ def yearweek_for(dt: datetime) -> str:
 
 
 def category_styles(categories):
-    names = list(CATEGORIES)
-    names.extend(sorted(set(categories) - set(CATEGORIES)))
+    configured_categories = get_settings()["categories"]
+    names = list(configured_categories)
+    names.extend(sorted(set(categories) - set(configured_categories)))
     styles = {}
     for index, name in enumerate(names):
         color, background, text, dark_background, dark_text = CATEGORY_PALETTE[
@@ -107,7 +139,7 @@ def get_weekly_summary():
             "SELECT COALESCE(SUM(amount),0) AS total FROM transactions WHERE year_week=?",
             (yw,)
         ).fetchone()
-    budget_available = WEEKLY_LIMIT - row["total"]
+    budget_available = get_settings()["weekly_limit"] - row["total"]
     days_to_end      = 6 - now.weekday()
     return budget_available, days_to_end
 
@@ -120,7 +152,7 @@ def get_last_week_summary():
             (yw,)
         ).fetchone()
     total = row["total"]
-    return total, WEEKLY_LIMIT - total
+    return total, get_settings()["weekly_limit"] - total
 
 
 def get_current_week_rows():
@@ -188,7 +220,8 @@ def build_dashboard_data(yw: str):
 
     # ── totals ────────────────────────────────────────────────
     total_spend = round(sum(r["amount"] for r in rows), 2)
-    remaining   = round(WEEKLY_LIMIT - total_spend, 2)
+    weekly_limit = get_settings()["weekly_limit"]
+    remaining   = round(weekly_limit - total_spend, 2)
 
     # ── category breakdown ────────────────────────────────────
     by_category = {}
@@ -243,7 +276,7 @@ def build_dashboard_data(yw: str):
     y_ticks   = [round(tick_step * i, 1) for i in range(6)]
 
     return dict(
-        budget           = WEEKLY_LIMIT,
+        budget           = weekly_limit,
         total_spend      = total_spend,
         remaining        = remaining,
         days_left        = days_left,
@@ -266,6 +299,47 @@ def build_dashboard_data(yw: str):
 @app.route("/")
 def root():
     return redirect(url_for("dashboard"))
+
+
+@app.route("/settings", methods=["GET", "POST"])
+def settings():
+    current = get_settings()
+    values = {
+        "weekly_limit": current["weekly_limit"],
+        "categories": "\n".join(current["categories"]),
+        "currency_symbol": current["currency_symbol"],
+    }
+    errors = []
+    if request.method == "POST":
+        values = {
+            "weekly_limit": request.form.get("weekly_limit", "").strip(),
+            "categories": request.form.get("categories", ""),
+            "currency_symbol": request.form.get("currency_symbol", "").strip(),
+        }
+        try:
+            weekly_limit = float(values["weekly_limit"])
+        except ValueError:
+            weekly_limit = 0
+        if not math.isfinite(weekly_limit) or weekly_limit < 0.01:
+            errors.append("Weekly limit must be a number of at least 0.01.")
+        categories = [name.strip() for name in values["categories"].splitlines() if name.strip()]
+        if not categories:
+            errors.append("Enter at least one category.")
+        elif len(categories) != len(set(categories)):
+            errors.append("Categories must be unique.")
+        if not values["currency_symbol"]:
+            errors.append("Enter a currency symbol.")
+        elif len(values["currency_symbol"]) > 16:
+            errors.append("Currency symbol must be 16 characters or fewer.")
+        if not errors:
+            with get_db() as conn:
+                conn.execute(
+                    "UPDATE settings SET weekly_limit=?, categories=?, currency_symbol=? WHERE id=1",
+                    (weekly_limit, json.dumps(categories), values["currency_symbol"]),
+                )
+            return redirect(url_for("settings", saved=1))
+    return render_template("settings.html", values=values, errors=errors,
+                           saved=request.method == "GET" and request.args.get("saved") == "1"), 400 if errors else 200
 
 
 @app.route("/dashboard")
@@ -316,10 +390,10 @@ def tracker():
 
     return render_template("tracker.html",
         data             = rows,
-        categories       = CATEGORIES,
+        categories       = get_settings()["categories"],
         budget_available = budget_available,
         days_to_end      = days_to_end,
-        weekly_limit     = WEEKLY_LIMIT,
+        weekly_limit     = get_settings()["weekly_limit"],
         last_week_total  = last_week_total,
         last_week_diff   = last_week_diff,
     )
@@ -349,7 +423,7 @@ def edit(row_id):
         row = dict(conn.execute(
             "SELECT * FROM transactions WHERE id=?", (row_id,)
         ).fetchone())
-    return render_template("edit.html", row=row, categories=CATEGORIES)
+    return render_template("edit.html", row=row, categories=get_settings()["categories"])
 
 
 # ─────────────────────────────────────────────────────────────────

@@ -30,6 +30,10 @@
                class="nav-btn {% if request.endpoint == 'frameo' %}active{% endif %}">
                 <span class="nav-icon">▦</span> Frameo
             </a>
+            <a href="{{ url_for('settings') }}"
+               class="nav-btn {% if request.endpoint == 'settings' %}active{% endif %}">
+                <span class="nav-icon">⚙</span> Settings
+            </a>
         </nav>
     </div>
 </header>

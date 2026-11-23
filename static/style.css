@@ -82,6 +82,8 @@ body {
 
 .top-nav {
   display: flex;
+  min-width: 0;
+  overflow-x: auto;
   gap: 6px;
   background: rgba(255,255,255,.07);
   padding: 5px;
@@ -717,6 +719,12 @@ tbody tr.over-limit:hover { background: #fee8e8; }
 
 .edit-input:focus, .edit-select:focus { border-color: var(--amber); }
 
+.settings-categories { resize: vertical; }
+.settings-help { margin-top: 7px; color: var(--text-muted); font-size: 13px; }
+.settings-success, .settings-errors { margin-bottom: 18px; font-size: 14px; }
+.settings-success { color: var(--green); }
+.settings-errors { color: var(--red); }
+
 .edit-actions {
   display: flex;
   gap: 12px;
@@ -784,6 +792,7 @@ tbody tr.over-limit:hover { background: #fee8e8; }
 
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
+  .header-inner { gap: 12px; }
   .brand-name { display: none; }
   .nav-btn { padding: 7px 14px; font-size: 12.5px; }
 

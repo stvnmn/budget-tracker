@@ -31,23 +31,27 @@ The Compose setup stores the database at `/DATA/AppData/budget_app/data/budget.d
 
 ## Configuration
 
-The app's default settings are in the `environment` section of `docker-compose.yml`. Edit them there to change the weekly limit, categories, or timezone. The app title and currency symbol can also be set in a `.env` file in the project directory:
+Open **Settings** in the app to change the weekly limit, categories, and currency symbol. Settings are saved in the SQLite database and persist across container restarts and updates. Enter one category per line; removing or renaming a category does not change existing transactions. Historical transactions remain visible and retain their original category.
+
+The weekly limit applies to all displayed weeks, including historical weeks. The currency symbol is for display only; changing it does not convert amounts.
+
+Set the timezone in the `environment` section of `docker-compose.yml`. The app title can also be set in a `.env` file in the project directory:
 
 ```dotenv
 APP_TITLE=Budget Tracker
-CURRENCY_SYMBOL="$"
 ```
 
 | Variable | Default | Description |
 |---|---|---|
 | `DB_PATH` | `/data/budget.db` | SQLite database path inside the container; change in Compose if needed |
-| `WEEKLY_LIMIT` | `500` | Weekly budget, in the units you choose |
-| `CATEGORIES` | `Food,Groceries` | Comma-separated transaction categories |
 | `TZ` | `Etc/UTC` | Timezone used for transaction timestamps and week calculations |
-| `CURRENCY_SYMBOL` | `$` | Display symbol only; changing it does not convert amounts |
 | `APP_TITLE` | `Budget Tracker` | Name shown in the app and browser title |
 
-For another currency symbol, set `CURRENCY_SYMBOL` to a value such as `€`, `£`, or `¥`. The app does not perform currency conversion.
+New databases default to a weekly limit of 500, categories Food and Groceries, and the `$` symbol.
+
+### Upgrading from environment-based settings
+
+On the first start with this version, the app initializes database settings from the existing `WEEKLY_LIMIT`, `CATEGORIES` (comma-separated), and `CURRENCY_SYMBOL` environment variables, if supplied. If replacing your Compose file, keep your old values in its `environment` section for that first start, or enter them on the Settings page afterward. Once initialized, the saved settings take precedence and these variables can be removed; changing them later will not change saved settings.
 
 ## ZimaOS / CasaOS
 
@@ -59,7 +63,7 @@ After the first successful workflow run, open the container package from the rep
 
 In ZimaOS, open **App Store → Custom Install → Compose**, paste the ZimaOS Compose file, and install. The `pull_policy: always` setting tells Docker Compose to check GHCR for the current image when deploying.
 
-The ZimaOS Compose template supports app title, currency symbol, timezone, and budget changes through its environment section. Keep its database mount path, `/DATA/AppData/budget_app/data:/data`, unchanged when updating if you want to continue using the same database. Back up the database before replacing an existing deployment. Stop or uninstall a previous deployment first, but do not delete its app data; duplicate deployments can conflict because they use the same container name and port.
+The ZimaOS Compose template supports app title and timezone changes through its environment section. Use the Settings page for the weekly limit, categories, and currency symbol. Keep its database mount path, `/DATA/AppData/budget_app/data:/data`, unchanged when updating if you want to continue using the same database. Back up the database before replacing an existing deployment. Stop or uninstall a previous deployment first, but do not delete its app data; duplicate deployments can conflict because they use the same container name and port.
 
 For code updates, push to `main`, wait for the **Publish container image** workflow to succeed, then redeploy/update the ZimaOS app so it pulls the new `latest` image. To use this template for a fork, change the image in both the workflow and the Compose file to the fork's GHCR package path.
 
@@ -85,4 +89,4 @@ Do not commit the backup file. If you changed the host data path in Compose, use
 
 ## Tech stack
 
-Python 3.12 · Flask · SQLite · Gunicorn · Jinja templates · Docker
+Python (version specified in `Dockerfile`) · Flask · SQLite · Gunicorn · Jinja templates · Docker

@@ -11,11 +11,8 @@ services:
       - /DATA/AppData/budget_app/data:/data
     environment:
       DB_PATH: /data/budget.db
-      WEEKLY_LIMIT: 500
-      CATEGORIES: Food,Groceries
       TZ: Etc/UTC
       APP_TITLE: Budget Tracker
-      CURRENCY_SYMBOL: "$"
     x-casaos:
       ports:
         - container: "8000"
